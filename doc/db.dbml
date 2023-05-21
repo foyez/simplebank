@@ -1,0 +1,49 @@
+Project simplebank {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # Simple Bank Database
+  '''
+}
+
+Table accounts as A {
+  id bigserial [pk]
+  owner varchar [not null]
+  balance int [not null]
+  currency varchar [not null]
+  created_at timestamptz [not null, default: `now()`]
+  note: "table 'accounts' contains account information"
+
+  Indexes {
+    owner
+  }
+}
+
+Table entries {
+  id bigserial [pk]
+  account_id bigint [ref: > A.id] // many-to-one
+  amount bigint [not null, note: 'can be negative or positive']
+  created_at timestamptz [not null, default: `now()`]
+  note: "record balance changes"
+
+  Indexes {
+    account_id
+  }
+}
+
+// Another way to declare foreign key
+// Ref: entries.account_id > A.id
+
+Table transfers {
+  id bigserial [pk]
+  from_account_id bigint [ref: > A.id]
+  to_account_id bigint [ref: > A.id]
+  amount bigint [not null, note: 'must be positive']
+  created_at timestamptz [not null, default: `now()`]
+  note: "keep tack transfer history"
+
+  Indexes {
+    from_account_id
+    to_account_id
+    (from_account_id, to_account_id) // composite index
+  }
+}
