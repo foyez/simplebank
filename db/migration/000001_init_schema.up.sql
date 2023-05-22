@@ -1,7 +1,3 @@
--- SQL dump generated using DBML (dbml-lang.org)
--- Database: PostgreSQL
--- Generated at: 2023-05-22T11:09:24.764Z
-
 CREATE TABLE "accounts" (
   "id" bigserial PRIMARY KEY,
   "owner" varchar NOT NULL,

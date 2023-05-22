@@ -6,7 +6,7 @@
 - Record all balance changes (create an account entry for each change)
 - Money transfer transaction (perform money transfer between 2 accounts consistently within a transaction)
 
-## Database Design using <https://dbdiagram.io>
+## Database Design using [dbdiagram](https://dbdiagram.io)
 
 <details>
 <summary>View contents</summary>
@@ -64,7 +64,7 @@ sql2dbml doc/schema.sql --postgres -o doc/db.dbml
 <details>
 <summary>View contents</summary>
 
-- Download & install docker from <https://docs.docker.com/desktop/install/mac-install/>
+- Download & install docker: [link](https://docs.docker.com/desktop/install/mac-install)
 
 Postgresql
 
@@ -77,9 +77,12 @@ docker run --name postgres15 -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASS
 
 # Run command in container
 docker exec -it postgres15 psql -U root
+
+# Test connection
+SELECT now();
 ```
 
-Postgres commands
+Postgres commands <sup>[ref](https://hasura.io/blog/top-psql-commands-and-flags-you-need-to-know-postgresql/)</sup>
 
 ```sh
 # Connect to a database (same host)
@@ -157,12 +160,33 @@ docker run --name mysql8 -p 3306:3306 -e MYSQL_ROOT_PASSWORD=testpass -d mysql:8
 docker exec -it mysql8 mysql -uroot -ptestpass
 ```
 
-Mysql commands [Handy MySQL Commands](http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm)
+Create a Postgres database from command line
+
+```sh
+# enter postgres shell & create a database
+docker exec -it postres15 sh
+createdb --username=root --owner=root simple_bank
+dropdb simple_bank
+
+# create a database
+docker exec -it postres15 createdb --username=root --owner=root simple_bank
+
+# login to db cli
+docker exec -it postgres15 psql -U root simple_bank
+
+# exit from db cli
+\q
+```
+
+Mysql commands <sup>[ref](http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm)</sup>
 
 ```sh
 # Connect to database
 mysql -h hostname -u username -p
 mysql -uroot -ptestpass
+
+# Create a database from command line
+mysql -e "create database db_name" -u username -p
 
 # Create a database
 create database db_name;
@@ -201,6 +225,22 @@ drop table table_name;
 exit;
 ```
 
+Create a Mysql database from command line
+
+```sh
+# create a database
+docker exec -it mysql8 mysql -e "create database db_name" -u username -p
+
+# delete a database
+docker exec -it mysql8 mysql -e "drop database db_name" -u username -p
+
+# login to db cli
+docker exec -it mysql8 mysql db_name -u username -p
+
+# exit from db cli
+\q
+```
+
 Show docker logs
 
 ```sh
@@ -209,6 +249,35 @@ docker logs postgres15
 
 # Mysql
 docker logs mysql8
+```
+
+Searching ran commands starting with `docker run`
+
+```sh
+history | grep "docker run"
+```
+
+- Download & install database management tool [TablePlus](https://tableplus.com/)
+
+</details>
+
+## Database Migration using [golang-migrate](https://github.com/golang-migrate/migrate)
+
+<details>
+<summary>View contents</summary>
+
+Install migrate cli: [link](https://github.com/golang-migrate/migrate/tree/master/cmd/migrate)
+
+```sh
+$ curl -L https://github.com/golang-migrate/migrate/releases/download/$version/migrate.$os-$arch.tar.gz | tar xvz
+# OR
+brew install golang-migrate
+
+# migrate help command
+migrate -help
+
+# create migration files
+migrate create -ext sql -dir db/migration -seq init_schema
 ```
 
 </details>
