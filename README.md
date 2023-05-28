@@ -281,3 +281,40 @@ migrate create -ext sql -dir db/migration -seq init_schema
 ```
 
 </details>
+
+## Database CRUD
+
+<details>
+<summary>View contents</summary>
+- Create: insert new records to the database
+- Read: select or search for records in the database
+- Update: change some fields of the record in the database
+- Delete: remove records from the database
+
+### CRUD Tools
+
+- Database/SQL: t
+- ORM: GORM
+- SQLX
+- SQLC
+
+### Setup [SQLC](https://sqlc.dev/)
+
+```sh
+# install sqlc
+brew install sqlc
+
+# to know sqlc commands
+sqlc help
+
+# Create an empty sqlc.yaml settings file
+# schema_path: db/migration
+# query path: db/query
+# output path: db/sqlc
+sqlc init
+
+# Generate Go code from SQL
+sqlc generate
+```
+
+</details>

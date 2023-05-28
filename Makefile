@@ -44,4 +44,9 @@ migratedown:
 	@echo "applying all down migrations..."
 	migrate -path db/migration -database ${DB_URL} -verbose down
 
-.PHONY: db_docs db_schema postgres createdb dropdb create_migration migrateup migratedown
+## sqlc: generate Go code from SQL
+sqlc:
+	@echo "generating go code from sql"
+	sqlc generate
+
+.PHONY: db_docs db_schema postgres createdb dropdb create_migration migrateup migratedown sqlc
