@@ -286,6 +286,7 @@ migrate create -ext sql -dir db/migration -seq init_schema
 
 <details>
 <summary>View contents</summary>
+
 - Create: insert new records to the database
 - Read: select or search for records in the database
 - Update: change some fields of the record in the database
@@ -316,5 +317,91 @@ sqlc init
 # Generate Go code from SQL
 sqlc generate
 ```
+
+</details>
+
+## Unit tests for Database
+
+<details>
+<summary>View contents</summary>
+
+- Install a pure postgres driver for Go's database/sql package
+
+```sh
+go get github.com/lib/pq
+```
+
+`main_test.go`
+
+```go
+package db
+
+import (
+ "database/sql"
+ "log"
+ "os"
+ "testing"
+
+ _ "github.com/lib/pq"
+)
+
+const (
+ dbDriver = "postgres"
+ dbSource = "postgresql://root:testpass@localhost:5432/simplebank?sslmode=disable"
+)
+
+var testQueries *Queries
+
+func TestMain(m *testing.M) {
+ db, err := sql.Open(dbDriver, dbSource)
+ if err != nil {
+  log.Fatal("cannot connect to db: ", err)
+ }
+
+ testQueries = New(db)
+
+ os.Exit(m.Run())
+}
+```
+
+- Run `go mod tidy` to add dependency in `go.mod` file
+- Install [testify](https://github.com/stretchr/testify) - `A toolkit for assertions and mocks`
+
+```sh
+go get github.com/stretchr/testify
+```
+
+`account_test.go`
+
+```go
+package db
+
+import (
+ "context"
+ "testing"
+
+ "github.com/stretchr/testify/require"
+)
+
+func TestCreateAccount(t *testing.T) {
+ arg := CreateAccountParams{
+  Owner:    "Mithu",
+  Balance:  20,
+  Currency: "USD",
+ }
+ account, err := testQueries.CreateAccount(context.Background(), arg)
+ require.NoError(t, err)
+ require.NotEmpty(t, account)
+
+ require.Equal(t, account.Owner, arg.Owner)
+ require.Equal(t, account.Balance, arg.Balance)
+ require.Equal(t, account.Currency, arg.Currency)
+
+ require.NotZero(t, account.ID)
+ require.NotZero(t, account.CreatedAt)
+}
+```
+
+- Run `go mod tidy` to add _testify_ dependency
 
 </details>

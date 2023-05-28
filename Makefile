@@ -49,4 +49,9 @@ sqlc:
 	@echo "generating go code from sql"
 	sqlc generate
 
-.PHONY: db_docs db_schema postgres createdb dropdb create_migration migrateup migratedown sqlc
+## test: test the project
+test:
+	@echo "testing"
+	go test -v -cover ./...
+
+.PHONY: db_docs db_schema postgres createdb dropdb create_migration migrateup migratedown sqlc test
