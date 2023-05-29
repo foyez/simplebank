@@ -10,8 +10,6 @@ import (
 )
 
 func createRandomEntry(t *testing.T, account Account) Entry {
-	require.NotEmpty(t, account)
-
 	arg := CreateEntryParams{
 		AccountID: account.ID,
 		Amount:    util.RandomMoney(),
