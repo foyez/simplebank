@@ -405,3 +405,80 @@ func TestCreateAccount(t *testing.T) {
 - Run `go mod tidy` to add _testify_ dependency
 
 </details>
+
+## Database Transaction
+
+<details>
+<summary>View contents</summary>
+
+### DB Transaction
+
+- A single unit of work
+- Often made up of multiple db operations
+
+**Example:** Transfer 10 USD from bank account 1 to bank account 2.
+
+```txt
+1. Create a transfer record with amount = 10
+2. Create an account entry for account 1 with amount = -10
+3. Create an account entry for account 2 with amount = +10
+4. Subtract 10 from the balance of account 1
+5. Add 10 to the balance of account 2
+```
+
+### Why do we need db transaction?
+
+1. To provide a reliable and consistent unit of work, even in case of system failure
+2. To provide isolation between programs that access the database concurrently
+
+A transaction in a database system must maintain **ACID** (Atomicity, Consistency, Isolation and Durability) in order to ensure accuracy, completeness and data integrity.
+
+1. **Atomicity**
+   Either all operations complete successfully or if the transaction fails, everything will be rolled back and the db will be unchanged.
+
+2. **Consistency**
+   The db state must be valid after the transaction. All constraints must be satisfied. More precisely, all data written to the database must be valid according to predefined rules, including constraints, cascade, and triggers.
+
+3. **Isolation**
+   Concurrent transaction must not affect each other.
+
+4. **Durability**
+   Data written by a successful transaction must be recorded in persistent storage, even in case of system failure.
+
+### How to run SQL TX?
+
+```sql
+BEGIN;
+COMMIT;
+
+-- if the transaction is failed
+BEGIN;
+ROLLBACK;
+```
+
+### Deadlock
+
+- a situation in which two or more transactions are waiting for one another to give up locks
+
+Deadlocks can happen in multi-user environments when two or more transactions are running concurrently and try to access the same data in a different order. When this happens, one transaction may hold a lock on a resource that another transaction needs, while the second transaction may hold a lock on a resource that the first transaction needs. Both transactions are then blocked, waiting for the other to release the resource they need.
+
+DBMSs often use various techniques to detect and resolve deadlocks automatically. These techniques include timeout mechanisms, where a transaction is forced to release its locks after a certain period of time, and deadlock detection algorithms, which periodically scan the transaction log for deadlock cycles and then choose a transaction to abort to resolve the deadlock.
+
+It is also possible to prevent deadlocks by careful design of transactions, such as always acquiring locks in the same order or releasing locks as soon as possible. Proper design of the database schema and application can also help to minimize the likelihood of deadlocks
+
+**ref:** [Deadlock in DBMS](https://www.geeksforgeeks.org/deadlock-in-dbms/)
+
+### Update accounts concurrently
+
+```sql
+BEGIN;
+
+SELECT * FROM accounts WHERE id = 15 FOR UPDATE;
+UPDATE accounts SET balance = 500 WHERE id = 15;
+
+COMMIT;
+```
+
+- [DB transaction lock & How to handle deadlock](https://www.youtube.com/watch?v=G2aggv_3Bbg&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=10)
+
+</details>
