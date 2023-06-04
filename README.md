@@ -479,6 +479,26 @@ UPDATE accounts SET balance = 500 WHERE id = 15;
 COMMIT;
 ```
 
+### Check deadlocks
+
+```sql
+SELECT
+   a.application_name,
+   l.relation::regclass,
+   l.transactionid,
+   l.mode,
+   l.locktype,
+   l.GRANTED,
+   a.username,
+   a.query,
+   a.pid
+FROM pq_stat_activity a
+JOIN pg_locks l ON l.pid = a.pid
+WHERE a.application_name = 'psql'
+ORDER BY a.pid;
+```
+
 - [DB transaction lock & How to handle deadlock](https://www.youtube.com/watch?v=G2aggv_3Bbg&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=10)
+- [How to avoid deadlock in DB transaction? Queries order matters!](https://www.youtube.com/watch?v=qn3-5wdOfoA&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=8)
 
 </details>
