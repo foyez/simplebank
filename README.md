@@ -502,3 +502,31 @@ ORDER BY a.pid;
 - [How to avoid deadlock in DB transaction? Queries order matters!](https://www.youtube.com/watch?v=qn3-5wdOfoA&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=8)
 
 </details>
+
+## Github Actions
+
+<details>
+<summary>View contents</summary>
+
+- We can trigger a workflow by 3 ways: `event`, `schedule`, or `manually`
+- A workflow consists of one or multiple jobs
+- A job is composed of multiple steps
+- Each step has one or more actions
+- All jobs inside a workflow normally run in parallel, unless they depend on each other
+- If some jobs depend on each other, they run serially
+- Each job will be run separately by a specific runner
+- The runners will report progress, logs, and results of the jobs back to github
+
+<img width="1552" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/5954c678-bdf0-45cc-bf84-7db9a383bf58">
+
+### Setup a workflow for Golang and Postgres
+
+- Goto `Actions` tab
+- Then, in `Go` action click `configure`
+- Create github workflows directory: `mkdir -p .github/workflows`
+- Create workflow file: `touch .github/workflows/test.yml`
+- Then, copy and paste the template from github for go
+- [Creating PostgreSQL service containers](https://docs.github.com/en/actions/using-containerized-services/creating-postgresql-service-containers)
+- [How to setup Github Actions for Go + Postgres to run automated tests](https://dev.to/techschoolguru/how-to-setup-github-actions-for-go-postgres-to-run-automated-tests-81o)
+
+</details>
