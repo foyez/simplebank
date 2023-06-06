@@ -530,3 +530,153 @@ ORDER BY a.pid;
 - [How to setup Github Actions for Go + Postgres to run automated tests](https://dev.to/techschoolguru/how-to-setup-github-actions-for-go-postgres-to-run-automated-tests-81o)
 
 </details>
+
+## Implement HTTP API using Gin
+
+<details>
+<summary>View contents</summary>
+
+### Popular web frameworks
+
+- [Gin](https://github.com/gin-gonic/gin)
+- Beego
+- Echo
+- Revel
+- Martini
+- Fiber
+- Buffalo
+
+### Popular HTTP routers
+
+- FastHttp
+- Gorilla Mux
+- HttpRouter
+- Chi
+
+Install `gin` package:
+
+```sh
+https://github.com/gin-gonic/gin
+```
+
+Write a POST api:
+
+<details>
+<summary>View contents</summary>
+
+`api/server.go`
+
+```go
+package api
+
+import (
+ db "github.com/foyez/simplebank/db/sqlc"
+ "github.com/gin-gonic/gin"
+)
+
+// Server serves HTTP requests.
+type Server struct {
+ store  *db.Store
+ router *gin.Engine
+}
+
+// NewServer creates a new HTTP server and setup routing.
+func NewServer(store *db.Store) *Server {
+ server := &Server{store: store}
+ router := gin.Default()
+
+ router.POST("/accounts", server.createAccount)
+
+ server.router = router
+ return server
+}
+
+// Start runs the HTTP server on a specific address.
+func (server *Server) Start(address string) error {
+ return server.router.Run(address)
+}
+
+func errorResponse(err error) gin.H {
+ return gin.H{"error": err.Error()}
+}
+```
+
+`api/account.go`
+
+```go
+package api
+
+import (
+ "net/http"
+
+ db "github.com/foyez/simplebank/db/sqlc"
+ "github.com/gin-gonic/gin"
+)
+
+type createAccountRequest struct {
+ Owner    string `json:"owner" binding:"required"`
+ Currency string `json:"currency" binding:"required,oneof=USD EUR"`
+}
+
+func (server *Server) createAccount(ctx *gin.Context) {
+ var req createAccountRequest
+ if err := ctx.ShouldBindJSON(&req); err != nil {
+  ctx.JSON(http.StatusBadRequest, errorResponse(err))
+  return
+ }
+
+ arg := db.CreateAccountParams{
+  Owner:    req.Owner,
+  Currency: req.Currency,
+  Balance:  0,
+ }
+
+ account, err := server.store.CreateAccount(ctx, arg)
+ if err != nil {
+  ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+  return
+ }
+
+ ctx.JSON(http.StatusCreated, account)
+}
+```
+
+`main.go`
+
+```go
+package main
+
+import (
+ "database/sql"
+ "log"
+
+ "github.com/foyez/simplebank/api"
+ db "github.com/foyez/simplebank/db/sqlc"
+ _ "github.com/lib/pq"
+)
+
+const (
+ dbDriver = "postgres"
+ dbSource = "postgresql://root:testpass@localhost:5432/simplebank?sslmode=disable"
+ address  = "0.0.0.0:8080"
+)
+
+func main() {
+ conn, err := sql.Open(dbDriver, dbSource)
+ if err != nil {
+  log.Fatal("cannot connect to db: ", err)
+ }
+
+ store := db.NewStore(conn)
+ server := api.NewServer(store)
+
+ err = server.Start(address)
+ if err != nil {
+  log.Fatal("cannot start server: ", err)
+ }
+}
+```
+
+</details>
+
+</details>

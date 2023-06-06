@@ -54,4 +54,9 @@ test:
 	@echo "testing"
 	go test -v -cover ./...
 
-.PHONY: db_docs db_schema postgres createdb dropdb create_migration migrateup migratedown sqlc test
+## server: start the HTTP server
+server:
+	@echo "starting the HTTP server"
+	go run main.go
+
+.PHONY: db_docs db_schema postgres createdb dropdb create_migration migrateup migratedown sqlc test server
