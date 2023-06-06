@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	db "github.com/foyez/simplebank/db/sqlc"
 	"github.com/gin-gonic/gin"
@@ -57,4 +58,71 @@ func (server *Server) getAccount(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, account)
+}
+
+type listAccountsRequest struct {
+	PageID   int32 `form:"page_id" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
+}
+
+func (server *Server) listAccounts(ctx *gin.Context) {
+	var req listAccountsRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := db.ListAccountsParams{
+		Limit:  req.PageSize,
+		Offset: (req.PageID - 1) * req.PageSize,
+	}
+
+	accounts, err := server.store.ListAccounts(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, accounts)
+}
+
+type listAccountsWithCursorRequest struct {
+	Cursor time.Time `form:"cursor"`
+	Limit  int32     `form:"limit" binding:"required,min=5,max=10"`
+}
+
+func (server *Server) listAccountsWithCursor(ctx *gin.Context) {
+	var req listAccountsWithCursorRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	limitPlusOne := req.Limit + 1
+
+	arg := db.ListAccountWithCursorParams{
+		Limit: limitPlusOne,
+		Cursor: sql.NullTime{
+			Time:  req.Cursor,
+			Valid: !req.Cursor.IsZero(),
+		},
+	}
+
+	accounts, err := server.store.ListAccountWithCursor(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	newAccounts := accounts
+	if int32(len(accounts)) > req.Limit {
+		newAccounts = accounts[0:req.Limit]
+	}
+
+	rsp := gin.H{
+		"accounts": newAccounts,
+		"has_more": int32(len(accounts)) == limitPlusOne,
+	}
+
+	ctx.JSON(http.StatusOK, rsp)
 }

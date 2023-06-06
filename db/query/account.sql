@@ -22,6 +22,12 @@ ORDER BY id
 LIMIT $1
 OFFSET $2;
 
+-- name: ListAccountWithCursor :many
+SELECT * FROM accounts
+WHERE created_at < sqlc.narg('cursor') OR sqlc.narg('cursor') IS NULL
+ORDER BY created_at DESC
+LIMIT sqlc.arg('limit');
+
 -- name: UpdateAccount :one
 UPDATE accounts
 SET balance = $2

@@ -559,7 +559,7 @@ Install `gin` package:
 https://github.com/gin-gonic/gin
 ```
 
-Write a POST api:
+- A POST api:
 
 <details>
 <summary>View contents</summary>
@@ -675,6 +675,166 @@ func main() {
   log.Fatal("cannot start server: ", err)
  }
 }
+```
+
+</details>
+
+- A GET api:
+
+<details>
+<summary>View contents</summary>
+
+`api/account.go`
+
+```go
+type getAccountRequest struct {
+ ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+func (server *Server) getAccount(ctx *gin.Context) {
+ var req getAccountRequest
+ if err := ctx.ShouldBindUri(&req); err != nil {
+  ctx.JSON(http.StatusBadRequest, errorResponse(err))
+  return
+ }
+
+ account, err := server.store.GetAccount(ctx, req.ID)
+ if err != nil {
+  if err == sql.ErrNoRows {
+   ctx.JSON(http.StatusNotFound, errorResponse(err))
+   return
+  }
+  ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+  return
+ }
+
+ ctx.JSON(http.StatusOK, account)
+}
+```
+
+`api/server.go`
+
+```go
+router.GET("/accounts/:id", server.getAccount)
+```
+
+API:
+
+```txt
+http://localhost:8080/accounts/1
+```
+
+</details>
+
+- A GET api with offset pagination:
+
+<details>
+<summary>View contents</summary>
+
+`api/account.go`
+
+```go
+type listAccountsRequest struct {
+ PageID   int32 `form:"page_id" binding:"required,min=1"`
+ PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
+}
+
+func (server *Server) listAccounts(ctx *gin.Context) {
+ var req listAccountsRequest
+ if err := ctx.ShouldBindQuery(&req); err != nil {
+  ctx.JSON(http.StatusBadRequest, errorResponse(err))
+  return
+ }
+
+ arg := db.ListAccountsParams{
+  Limit:  req.PageSize,
+  Offset: (req.PageID - 1) * req.PageSize,
+ }
+
+ accounts, err := server.store.ListAccounts(ctx, arg)
+ if err != nil {
+  ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+  return
+ }
+
+ ctx.JSON(http.StatusOK, accounts)
+}
+```
+
+`api/server.go`
+
+```go
+router.GET("/accounts", server.listAccounts)
+```
+
+API:
+
+```txt
+http://localhost:8080/accounts?page_id=1&page_size=10
+```
+
+</details>
+
+- A GET api with cursor pagination:
+
+<details>
+<summary>View contents</summary>
+
+`api/account.go`
+
+```go
+type listAccountsWithCursorRequest struct {
+ Cursor time.Time `form:"cursor"`
+ Limit  int32     `form:"limit" binding:"required,min=5,max=10"`
+}
+
+func (server *Server) listAccountsWithCursor(ctx *gin.Context) {
+ var req listAccountsWithCursorRequest
+ if err := ctx.ShouldBindQuery(&req); err != nil {
+  ctx.JSON(http.StatusBadRequest, errorResponse(err))
+  return
+ }
+
+ limitPlusOne := req.Limit + 1
+
+ arg := db.ListAccountWithCursorParams{
+  Limit: limitPlusOne,
+  Cursor: sql.NullTime{
+   Time:  req.Cursor,
+   Valid: !req.Cursor.IsZero(),
+  },
+ }
+
+ accounts, err := server.store.ListAccountWithCursor(ctx, arg)
+ if err != nil {
+  ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+  return
+ }
+
+ newAccounts := accounts
+ if int32(len(accounts)) > req.Limit {
+  newAccounts = accounts[0:req.Limit]
+ }
+
+ rsp := gin.H{
+  "accounts": newAccounts,
+  "has_more": int32(len(accounts)) == limitPlusOne,
+ }
+
+ ctx.JSON(http.StatusOK, rsp)
+}
+```
+
+`api/server.go`
+
+```go
+router.GET("/accountsWithCursor", server.listAccountsWithCursor)
+```
+
+API:
+
+```txt
+http://localhost:8080/accountsWithCursor?limit=5&cursor=2023-06-05T02%3A36%3A19.167614Z
 ```
 
 </details>
