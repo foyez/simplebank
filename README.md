@@ -538,7 +538,7 @@ ORDER BY a.pid;
 
 ### Popular web frameworks
 
-- [Gin](https://github.com/gin-gonic/gin)
+- [Gin](https://github.com/gin-gonic/gin/blob/master/docs/doc.md#build-with-json-replacement)
 - Beego
 - Echo
 - Revel
@@ -563,6 +563,19 @@ https://github.com/gin-gonic/gin
 
 <details>
 <summary>View contents</summary>
+
+`db/query/account.sql`
+
+```sql
+-- name: CreateAccount :one
+INSERT INTO accounts (
+  owner,
+  balance,
+  currency
+) VALUES (
+  $1, $2, $3
+) RETURNING *;
+```
 
 `api/server.go`
 
@@ -614,6 +627,7 @@ import (
 )
 
 type createAccountRequest struct {
+ // json tag to de-serialize json body
  Owner    string `json:"owner" binding:"required"`
  Currency string `json:"currency" binding:"required,oneof=USD EUR"`
 }
@@ -684,6 +698,14 @@ func main() {
 <details>
 <summary>View contents</summary>
 
+`db/query/account.sql`
+
+```sql
+-- name: GetAccount :one
+SELECT * FROM accounts
+WHERE id = $1 LIMIT 1;
+```
+
 `api/account.go`
 
 ```go
@@ -730,6 +752,16 @@ http://localhost:8080/accounts/1
 
 <details>
 <summary>View contents</summary>
+
+`db/query/account.sql`
+
+```sql
+-- name: ListAccounts :many
+SELECT * FROM accounts
+ORDER BY id
+LIMIT $1
+OFFSET $2;
+```
 
 `api/account.go`
 
@@ -779,6 +811,16 @@ http://localhost:8080/accounts?page_id=1&page_size=10
 
 <details>
 <summary>View contents</summary>
+
+`db/query/account.sql`
+
+```sql
+-- name: ListAccountWithCursor :many
+SELECT * FROM accounts
+WHERE created_at < sqlc.narg('cursor') OR sqlc.narg('cursor') IS NULL
+ORDER BY created_at DESC
+LIMIT sqlc.arg('limit');
+```
 
 `api/account.go`
 
@@ -838,5 +880,8 @@ http://localhost:8080/accountsWithCursor?limit=5&cursor=2023-06-05T02%3A36%3A19.
 ```
 
 </details>
+
+- [Gin binding in Go: A tutorial with examples](https://blog.logrocket.com/gin-binding-in-go-a-tutorial-with-examples/)
+- [Build RESTful API using Go Gin](https://www.golinuxcloud.com/golang-gin/)
 
 </details>
