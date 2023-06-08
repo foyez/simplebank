@@ -885,3 +885,81 @@ http://localhost:8080/accountsWithCursor?limit=5&cursor=2023-06-05T02%3A36%3A19.
 - [Build RESTful API using Go Gin](https://www.golinuxcloud.com/golang-gin/)
 
 </details>
+
+## Load config from file & environment variables with [Viper](https://github.com/spf13/viper)
+
+<details>
+<summary>View contents</summary>
+
+Install viper:
+
+```sh
+go get github.com/spf13/viper
+```
+
+`app.env`
+
+```env
+DB_DRIVER=postgres
+DB_SOURCE=postgresql://root:testpass@localhost:5432/simplebank?sslmode=disable
+SERVER_ADDRESS=0.0.0.0:8080
+```
+
+`util/config.go`
+
+```go
+package util
+
+import "github.com/spf13/viper"
+
+// Config stores all configuration of the application.
+type Config struct {
+ DBDriver      string `mapstructure:"DB_DRIVER"`
+ DBSource      string `mapstructure:"DB_SOURCE"`
+ ServerAddress string `mapstructure:"SERVER_ADDRESS"`
+}
+
+// LoadConfig reads configuration from file or environment variables.
+func LoadConfig(path string) (config Config, err error) {
+ viper.AddConfigPath(path)
+ viper.SetConfigName("app")
+ viper.SetConfigType("env")
+
+ viper.AutomaticEnv()
+
+ err = viper.ReadInConfig()
+ if err != nil {
+  return
+ }
+
+ err = viper.Unmarshal(&config)
+ return
+}
+```
+
+`main.go`
+
+```go
+package main
+
+import (
+ "database/sql"
+ "log"
+
+ "github.com/foyez/simplebank/util"
+ _ "github.com/lib/pq"
+)
+
+func main() {
+ config, err := util.LoadConfig(".")
+ if err != nil {
+  log.Fatal("cannot load config: ", err)
+ }
+
+ conn, err := sql.Open(config.DBDriver, config.DBSource)
+
+//  ...
+}
+```
+
+</details>
