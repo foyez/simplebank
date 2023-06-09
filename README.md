@@ -963,3 +963,171 @@ func main() {
 ```
 
 </details>
+
+## Mock DB for testing HTTP API
+
+<details>
+<summary>View contents</summary>
+
+[Source](https://www.youtube.com/watch?v=rL0aeMutoJ0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=13)
+
+### Why mock database?
+
+- Independent tests: avoid conflicts
+- Faster tests
+- 100% coverage: easily setup edge cases
+
+Install [gomock](https://github.com/golang/mock):
+
+```sh
+go install github.com/golang/mock/mockgen@v1.6.0
+go get github.com/golang/mock/mockgen@v1.6.0
+```
+
+`db/sqlc/store.go`
+
+```go
+package db
+
+import (
+ "context"
+ "database/sql"
+)
+
+// Store provides all the function to exec
+type Store interface {
+ Querier
+ TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error)
+}
+
+// SQLStore provides all functionalities to execute SQL queries and transaction
+type SQLStore struct {
+ *Queries
+ db *sql.DB
+}
+
+// NewStore creates a new store
+func NewStore(db *sql.DB) Store {
+ return &SQLStore{
+  db:      db,
+  Queries: New(db),
+ }
+}
+```
+
+Generate mock interfaces:
+
+```sh
+mockgen -package mockdb -destination db/mock/store.go github.com/foyez/simplebank/db/sqlc Store
+```
+
+`api/account_test.go`
+
+```go
+package api
+
+import (
+ "bytes"
+ "encoding/json"
+ "fmt"
+ "io/ioutil"
+ "net/http"
+ "net/http/httptest"
+ "testing"
+
+ mockdb "github.com/foyez/simplebank/db/mock"
+ db "github.com/foyez/simplebank/db/sqlc"
+ "github.com/foyez/simplebank/util"
+ "github.com/golang/mock/gomock"
+ "github.com/stretchr/testify/require"
+)
+
+func TestGetAccountAPI(t *testing.T) {
+ account := randomAccount()
+
+ testCases := []struct {
+  name          string
+  accountID     int64
+  buildStubs    func(store *mockdb.MockStore)
+  checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+ }{
+  {
+   name:      "OK",
+   accountID: account.ID,
+   buildStubs: func(store *mockdb.MockStore) {
+    store.EXPECT().
+     GetAccount(gomock.Any(), gomock.Eq(account.ID)).
+     Times(1).
+     Return(account, nil)
+   },
+   checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+    require.Equal(t, http.StatusOK, recorder.Code)
+    requireBodyMatchAccount(t, recorder.Body, account)
+   },
+  },
+ }
+
+ for i := range testCases {
+  tc := testCases[i]
+
+  t.Run(tc.name, func(t *testing.T) {
+   ctrl := gomock.NewController(t)
+   defer ctrl.Finish()
+
+   store := mockdb.NewMockStore(ctrl)
+   tc.buildStubs(store)
+
+   // start test server and send request
+   server := NewServer(store)
+   recorder := httptest.NewRecorder()
+
+   url := fmt.Sprintf("/accounts/%d", account.ID)
+   request, err := http.NewRequest(http.MethodGet, url, nil)
+   require.NoError(t, err)
+
+   server.router.ServeHTTP(recorder, request)
+   tc.checkResponse(t, recorder)
+  })
+
+ }
+}
+
+func randomAccount() db.Account {
+ return db.Account{
+  ID:       util.RandomInt(1, 1000),
+  Owner:    util.RandomOwner(),
+  Balance:  util.RandomMoney(),
+  Currency: util.RandomCurrency(),
+ }
+}
+
+func requireBodyMatchAccount(t *testing.T, body *bytes.Buffer, account db.Account) {
+ data, err := ioutil.ReadAll(body)
+ require.NoError(t, err)
+
+ var gotAccount db.Account
+ err = json.Unmarshal(data, &gotAccount)
+ require.NoError(t, err)
+ require.Equal(t, account, gotAccount)
+}
+```
+
+`api/main_test.go`
+
+```go
+package api
+
+import (
+ "os"
+ "testing"
+
+ "github.com/gin-gonic/gin"
+)
+
+func TestMain(m *testing.M) {
+ gin.SetMode(gin.TestMode)
+ os.Exit(m.Run())
+}
+```
+
+</details>
