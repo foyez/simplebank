@@ -1131,3 +1131,246 @@ func TestMain(m *testing.M) {
 ```
 
 </details>
+
+## Dockerize the app
+
+<details>
+<summary>View contents</summary>
+
+`Dockerfile`
+
+```Dockerfile
+# Build stage
+FROM golang:1.20.2-alpine3.17 AS builder
+WORKDIR /app
+COPY . .
+RUN go build -o main main.go
+
+# Run stage
+FROM alpine:3.17
+WORKDIR /app
+COPY --from=builder /app/main .
+COPY app.env .
+
+EXPOSE 8080
+CMD [ "/app/main" ]
+```
+
+Build and Run docker container:
+
+```sh
+# build image
+docker build -t foyezar/simplebank:latest .
+
+# run container
+docker run --name simplebank -p 8080:8080 -e GIN_MODE=release foyezar/simplebank:latest
+```
+
+### Connect postgres with simplebank using network
+
+<details>
+<summary>View contents</summary>
+
+```sh
+# Get container details information
+docker container inspect postgres15
+```
+
+```json
+[
+  {
+    "Id": "efebd1beb2f417887655d482767644a4c816a28154ba1bb8f5cd1cb5cf2ad150",
+    "Created": "2023-05-22T06:54:07.034351837Z",
+    "Path": "docker-entrypoint.sh",
+    "Args": ["postgres"],
+    "Name": "/postgres15",
+    "NetworkSettings": {
+      "Ports": {
+        "5432/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "5432"
+          }
+        ]
+      },
+      "Gateway": "172.17.0.1",
+      "IPAddress": "172.17.0.2",
+      "MacAddress": "02:42:ac:11:00:02",
+      "Networks": {
+        "bridge": {
+          "Gateway": "172.17.0.1",
+          "IPAddress": "172.17.0.2"
+        }
+      }
+    }
+  }
+]
+```
+
+```sh
+docker container inspect simplebank
+```
+
+```json
+[
+  {
+    "Id": "928356064d037aef04f027b4bef1580b4381866cd8eb0cb02fd9b9675772eb26",
+    "Created": "2023-06-12T17:30:41.745803471Z",
+    "Path": "/app/main",
+    "Name": "/simplebank",
+    "NetworkSettings": {
+      "Ports": {
+        "8080/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "8080"
+          }
+        ]
+      },
+      "Gateway": "172.17.0.1",
+      "IPAddress": "172.17.0.3",
+      "MacAddress": "02:42:ac:11:00:03",
+      "Networks": {
+        "bridge": {
+          "Gateway": "172.17.0.1",
+          "IPAddress": "172.17.0.3"
+        }
+      }
+    }
+  }
+]
+```
+
+Here, the IP address of `postgres15` container (`172.17.0.2`) is different than the IP address of `simplebank` container (`172.17.0.3`).
+
+```sh
+# Get network list
+docker network ls
+
+# Get network details information
+docker network inspect bridge
+```
+
+```json
+[
+  {
+    "Name": "bridge",
+    "Driver": "bridge",
+    "Containers": {
+      "928356064d037aef04f027b4bef1580b4381866cd8eb0cb02fd9b9675772eb26": {
+        "Name": "simplebank",
+        "MacAddress": "02:42:ac:11:00:03",
+        "IPv4Address": "172.17.0.3/16",
+        "IPv6Address": ""
+      },
+      "efebd1beb2f417887655d482767644a4c816a28154ba1bb8f5cd1cb5cf2ad150": {
+        "Name": "postgres15",
+        "MacAddress": "02:42:ac:11:00:02",
+        "IPv4Address": "172.17.0.2/16",
+        "IPv6Address": ""
+      }
+    }
+  }
+]
+```
+
+```sh
+# Get docker network COMMAND
+docker network --help
+
+# Create a network
+docker network create bank-network
+
+# Get docker network connect COMMAND
+docker network connect --help
+
+# Connect a container with a network
+docker network connect bank-network postgres15
+
+# Get network details information
+docker network inspect bank-network
+```
+
+```json
+[
+  {
+    "Name": "bank-network",
+    "Scope": "local",
+    "Driver": "bridge",
+    "Containers": {
+      "efebd1beb2f417887655d482767644a4c816a28154ba1bb8f5cd1cb5cf2ad150": {
+        "Name": "postgres15",
+        "MacAddress": "02:42:ac:12:00:02",
+        "IPv4Address": "172.18.0.2/16",
+        "IPv6Address": ""
+      }
+    }
+  }
+]
+```
+
+```sh
+# Get container details information
+docker container inspect postgres15
+```
+
+```json
+[
+  {
+    "Name": "/postgres15",
+    "NetworkSettings": {
+      "Gateway": "172.17.0.1",
+      "IPAddress": "172.17.0.2",
+      "MacAddress": "02:42:ac:11:00:02",
+      "Networks": {
+        "bank-network": {
+          "Gateway": "172.18.0.1",
+          "IPAddress": "172.18.0.2",
+          "MacAddress": "02:42:ac:12:00:02"
+        },
+        "bridge": {
+          "Gateway": "172.17.0.1",
+          "IPAddress": "172.17.0.2",
+          "MacAddress": "02:42:ac:11:00:02"
+        }
+      }
+    }
+  }
+]
+```
+
+```sh
+# Run a container in a specific network
+docker run --name simplebank --network bank-network -p 8080:8080 -e GIN_MODE=release -e DB_SOURCE="postgresql://root:testpass@postgres15:5432/simplebank?sslmode=disable" foyezar/simplebank:latest
+```
+
+```sh
+# Get network details information
+docker network inspect bank-network
+```
+
+```json
+[
+  {
+    "Name": "bank-network",
+    "Scope": "local",
+    "Driver": "bridge",
+    "Containers": {
+      "bc239683e762e39e6d3d368f16c377ddacc3e6a02e6f0efd5c50bf8aed138ded": {
+        "Name": "simplebank",
+        "MacAddress": "02:42:ac:12:00:03",
+        "IPv4Address": "172.18.0.3/16"
+      },
+      "efebd1beb2f417887655d482767644a4c816a28154ba1bb8f5cd1cb5cf2ad150": {
+        "Name": "postgres15",
+        "MacAddress": "02:42:ac:12:00:02",
+        "IPv4Address": "172.18.0.2/16"
+      }
+    }
+  }
+]
+```
+
+</details>
+
+</details>
