@@ -1373,4 +1373,157 @@ docker network inspect bank-network
 
 </details>
 
+### Add docker-compose file to control network
+
+<details>
+<summary>View contents</summary>
+
+`Dockerfile`
+
+```Dockerfile
+# Build stage
+FROM golang:1.20.2-alpine3.17 AS builder
+WORKDIR /app
+COPY . .
+RUN go build -o main main.go
+# RUN apk add curl
+# RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.16.0/migrate.linux-amd64.tar.gz | tar xvz
+
+# Run stage
+FROM alpine:3.17
+WORKDIR /app
+COPY --from=builder /app/main .
+COPY app.env .
+COPY start.sh .
+COPY wait-for.sh .
+COPY db/migration ./db/migration
+
+EXPOSE 8080
+
+CMD [ "/app/main" ]
+ENTRYPOINT [ "/app/start.sh" ]
+```
+
+`docker-compose.yml`
+
+```yml
+version: "3.9"
+services:
+  postgres:
+    image: postgres:15.2-alpine
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=testpass
+      - POSTGRES_DB=simplebank
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_SOURCE=postgresql://root:testpass@postgres:5432/simplebank?sslmode=disable
+    depends_on:
+      - postgres
+    entrypoint: ["/app/wait-for.sh", "postgres:5432", "--", "/app/start.sh"]
+    command: ["/app/main"]
+```
+
+_Note:_
+
+```sh
+There are several things to be aware of when using depends_on:
+
+depends_on does not wait for db and redis to be “ready” before starting web - only until they have been started. If you need to wait for a service to be ready, see Controlling startup order for more on this problem and strategies for solving it.
+The depends_on option is ignored when deploying a stack in swarm mode with a version 3 Compose file.
+```
+
+- [Compose file version 3 reference](https://docs.docker.com/compose/compose-file/compose-file-v3/)
+- [wait-for](https://github.com/eficode/wait-for)
+
+```sh
+# Download wait-for.sh
+curl https://raw.github
+usercontent.com/eficode/wait-for/v2.2.4/wait-for -o wait-for.
+sh
+
+# Make wait-for.sh and start.sh executable
+chmod +x wait-for.sh
+chmod +x start.sh
+
+# Build docker image and run the container
+docker compose up
+
+# Get network info
+docker network inspect simplebank_default
+
+# Remove existing containers
+docker compose down
+
+# Remove docker image
+docker image rm simplebank_api
+```
+
+</details>
+
+</details>
+
+## Use golang-migrate in go project
+
+<details>
+<summary>View contents</summary>
+
+`main.go`
+
+```go
+import (
+ "github.com/golang-migrate/migrate/v4"
+ _ "github.com/golang-migrate/migrate/v4/database/postgres"
+ _ "github.com/golang-migrate/migrate/v4/source/file"
+)
+
+func main() {
+ config, err := util.LoadConfig(".")
+ if err != nil {
+  log.Fatal("cannot load config: ", err)
+ }
+
+ conn, err := sql.Open(config.DBDriver, config.DBSource)
+ if err != nil {
+  log.Fatal("cannot connect to db: ", err)
+ }
+
+ runDBMigration(config.MigrationURL, config.DBSource)
+
+//  ...
+}
+
+func runDBMigration(migrationURL string, dbSource string) {
+ migration, err := migrate.New(migrationURL, dbSource)
+ if err != nil {
+  log.Fatal("cannot create new migration instance: ", err)
+ }
+
+ if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
+  log.Fatal("failed to run migrate up: ", err)
+ }
+
+ log.Println("db migrated successfully")
+}
+```
+
+`app.env`
+
+```env
+MIGRATION_URL=file://db/migration
+```
+
+`util/config.go`
+
+```go
+type Config struct {
+ MigrationURL  string `mapstructure:"MIGRATION_URL"`
+}
+```
+
 </details>
