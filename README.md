@@ -1431,10 +1431,10 @@ services:
 
 _Note:_
 
-```sh
+```txt
 There are several things to be aware of when using depends_on:
 
-depends_on does not wait for db and redis to be “ready” before starting web - only until they have been started. If you need to wait for a service to be ready, see Controlling startup order for more on this problem and strategies for solving it.
+depends_on does not wait for postgres to be “ready” before starting web - only until they have been started. If you need to wait for a service to be ready, see Controlling startup order for more on this problem and strategies for solving it.
 The depends_on option is ignored when deploying a stack in swarm mode with a version 3 Compose file.
 ```
 
@@ -1468,7 +1468,7 @@ docker image rm simplebank_api
 
 </details>
 
-## Use golang-migrate in go project
+## Use golang-migrate in go project <sup>[ref](https://github.com/golang-migrate/migrate#use-in-your-go-project)</sup>
 
 <details>
 <summary>View contents</summary>
