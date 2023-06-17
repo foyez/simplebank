@@ -559,6 +559,8 @@ Install `gin` package:
 https://github.com/gin-gonic/gin
 ```
 
+- [Package validator](https://github.com/go-playground/validator)
+
 - A POST api:
 
 <details>
@@ -1020,6 +1022,8 @@ Generate mock interfaces:
 ```sh
 mockgen -package mockdb -destination db/mock/store.go github.com/foyez/simplebank/db/sqlc Store
 ```
+
+If we update the database base we have to run this command to update the mock store.
 
 `api/account_test.go`
 
@@ -1525,5 +1529,178 @@ type Config struct {
  MigrationURL  string `mapstructure:"MIGRATION_URL"`
 }
 ```
+
+</details>
+
+## Add User
+
+<details>
+<summary>View contents</summary>
+
+### Store password securely
+
+```txt
+Encrypt: plain password --> (bcrypt hash + cost + salt) --> hashed password
+
+Hashed Password:
+$(2A)$(10)$(N9QO8ULOICKGX2ZMRZOMYE)(IJZAGCFL7P92LDGXAD68LJZDL17LHWY)
+
+Group 1: Algorithm (bcrypt)
+Group 2: Cost (2^10 = 1024 key expansion rounds)
+Group 3: Salt (16 bytes = 128 bits, 22 characters (base64))
+Group 4: Hash (24 bytes = 192 bits, 31 characters (base64))
+
+Decrypt: hashed password --> (bcrypt + cost + salt) --> plain password
+```
+
+- Create user API:
+
+<details>
+<summary>View contents</summary>
+
+`db/query/user.sql`
+
+```sql
+-- name: CreateUser :one
+INSERT INTO users (
+  username,
+  hashed_password,
+  full_name,
+  email
+) VALUES (
+  $1, $2, $3, $4
+) RETURNING *;
+```
+
+`api/server.go`
+
+```go
+package api
+
+import (
+ db "github.com/foyez/simplebank/db/sqlc"
+ "github.com/gin-gonic/gin"
+)
+
+// Server serves HTTP requests.
+type Server struct {
+ store  *db.Store
+ router *gin.Engine
+}
+
+// NewServer creates a new HTTP server and setup routing.
+func NewServer(store *db.Store) *Server {
+ server := &Server{store: store}
+ router := gin.Default()
+
+ router.POST("/userrs", server.createUser)
+
+ server.router = router
+ return server
+}
+```
+
+`api/user.go`
+
+```go
+package api
+
+import (
+ "net/http"
+ "time"
+
+ db "github.com/foyez/simplebank/db/sqlc"
+ "github.com/foyez/simplebank/util"
+ "github.com/gin-gonic/gin"
+ "github.com/lib/pq"
+)
+
+type createUserRequest struct {
+ Username string `json:"username" binding:"required,alphanum"`
+ Password string `json:"password" binding:"required,min=6"`
+ FullName string `json:"full_name" binding:"required"`
+ Email    string `json:"email" binding:"required,email"`
+}
+
+type createUserResponse struct {
+ Username          string    `json:"username"`
+ FullName          string    `json:"full_name"`
+ Email             string    `json:"email"`
+ PasswordChangedAt time.Time `json:"password_changed_at"`
+ CreatedAt         time.Time `json:"created_at"`
+}
+
+func (server *Server) createUser(ctx *gin.Context) {
+ var req createUserRequest
+ if err := ctx.ShouldBindJSON(&req); err != nil {
+  ctx.JSON(http.StatusBadRequest, errorResponse(err))
+  return
+ }
+
+ hashedPassword, err := util.HashPassword(req.Password)
+ if err != nil {
+  ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+  return
+ }
+
+ arg := db.CreateUserParams{
+  Username:       req.Username,
+  HashedPassword: hashedPassword,
+  FullName:       req.FullName,
+  Email:          req.Email,
+ }
+ user, err := server.store.CreateUser(ctx, arg)
+ if err != nil {
+  if pqErr, ok := err.(*pq.Error); ok {
+   switch pqErr.Code.Name() {
+   case "unique_violation":
+    ctx.JSON(http.StatusForbidden, errorResponse(err))
+    return
+   }
+  }
+
+  ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+  return
+ }
+
+ rsp := createUserResponse{
+  Username:          user.Username,
+  FullName:          user.FullName,
+  Email:             user.Email,
+  PasswordChangedAt: user.PasswordChangedAt,
+  CreatedAt:         user.CreatedAt,
+ }
+
+ ctx.JSON(http.StatusCreated, rsp)
+}
+```
+
+`util/password.go`
+
+```go
+package util
+
+import (
+ "fmt"
+
+ "golang.org/x/crypto/bcrypt"
+)
+
+// HashPassword returns the bcrypt hash of the password
+func HashPassword(password string) (string, error) {
+ hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+ if err != nil {
+  return "", fmt.Errorf("failed to hash password: %w", err)
+ }
+ return string(hashedPassword), nil
+}
+
+// CheckPassword checks if the provided password is correct or not
+func CheckPassword(password string, hashedPassword string) error {
+ return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+}
+```
+
+</details>
 
 </details>
