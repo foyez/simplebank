@@ -39,10 +39,20 @@ migrateup:
 	@echo "applying all up migrations..."
 	migrate -path db/migration -database ${DB_URL} -verbose up
 
+## migrateup: apply last up migration
+migrateup1:
+	@echo "applying last up migration..."
+	migrate -path db/migration -database ${DB_URL} -verbose up 1
+
 ## migratedown: apply all down migrations
 migratedown:
 	@echo "applying all down migrations..."
 	migrate -path db/migration -database ${DB_URL} -verbose down
+
+## migratedown: apply last down migration
+migratedown1:
+	@echo "applying last down migration..."
+	migrate -path db/migration -database ${DB_URL} -verbose down 1
 
 ## sqlc: generate Go code from SQL
 sqlc:
@@ -64,4 +74,4 @@ mock:
 	@echo "generating mock interfaces..."
 	mockgen -package mockdb -destination db/mock/store.go github.com/foyez/simplebank/db/sqlc Store
 
-.PHONY: db_docs db_schema postgres createdb dropdb create_migration migrateup migratedown sqlc test server mock
+.PHONY: db_docs db_schema postgres createdb dropdb create_migration migrateup migratedown migrateup1 migratedown1 sqlc test server mock
