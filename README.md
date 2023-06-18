@@ -1703,4 +1703,37 @@ func CheckPassword(password string, hashedPassword string) error {
 
 </details>
 
+### Authentication
+
+<details>
+<summary>View contents</summary>
+
+#### Token-based Authentication
+
+- [Why PASETO is better than JWT for token-based authentication?](https://www.youtube.com/watch?v=nBGx-q52KAY&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=19)
+
+<img width="1562" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/094ebdee-8dcf-47e1-8361-387ae148534f">
+
+1. **JSON Web Token - JWT**
+
+<img width="1559" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/ca70be3b-2a2a-405e-87f3-f46d6342f12d">
+
+JWT sigining algorithms
+
+<img width="1558" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/c154e070-817b-4f30-9901-6cc5d00bc078">
+
+Problems of JWT
+
+<img width="1556" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/b82c09c6-9b54-4793-88d6-7a9b7a67828f">
+
+2. **Platform-Agnostic SEcurity TOkens - PASETO**
+
+<img width="1561" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/118e26e1-c79e-4ad3-8f3f-fbf030157169">
+
+PASETO structure
+
+<img width="1563" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/dc81e83d-18c3-44ed-84ec-11026a3c15f1">
+
+</details>
+
 </details>
