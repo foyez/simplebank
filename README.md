@@ -1734,6 +1734,11 @@ PASETO structure
 
 <img width="1563" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/dc81e83d-18c3-44ed-84ec-11026a3c15f1">
 
+#### Refresh Token
+
+<img width="891" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/6d2181b1-cada-4866-92ba-4284d296ff89">
+
+
 </details>
 
 </details>
