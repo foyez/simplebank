@@ -1710,6 +1710,9 @@ func CheckPassword(password string, hashedPassword string) error {
 
 #### Token-based Authentication
 
+<details>
+<summary>View contents</summary>
+
 - [Why PASETO is better than JWT for token-based authentication?](https://www.youtube.com/watch?v=nBGx-q52KAY&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=19)
 
 <img width="1562" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/094ebdee-8dcf-47e1-8361-387ae148534f">
@@ -1734,10 +1737,104 @@ PASETO structure
 
 <img width="1563" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/dc81e83d-18c3-44ed-84ec-11026a3c15f1">
 
+</details>
+
 #### Refresh Token
+
+<details>
+<summary>View contents</summary>
 
 <img width="891" alt="image" src="https://github.com/foyez/simplebank/assets/11992095/6d2181b1-cada-4866-92ba-4284d296ff89">
 
+`app.env`
+
+```env
+REFRESH_TOKEN=24h
+```
+
+`util/config.go`
+
+```go
+type Config struct {
+ RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
+}
+```
+
+Add migration for sessions table
+
+```sh
+make create_migration name=add_sessions
+```
+
+`db/migration/000003_add_sessions.up.sql`
+
+```sql
+CREATE TABLE "sessions" (
+  "id" uuid PRIMARY KEY,
+  "username" varchar NOT NULL,
+  "refresh_token" varchar NOT NULL,
+  "user_token" varchar NOT NULL,
+  "client_ip" varchar NOT NULL,
+  "is_blocked" boolean NOT NULL DEFAULT false,
+  "expires_at" timestamptz NOT NULL,
+  "created_at" timestamptz NOT NULL DEFAULT (now())
+);
+
+ALTER TABLE "sessions" ADD FOREIGN KEY ("username") REFERENCES "users" ("username");
+```
+
+`db/migration/000003_add_sessions.down.sql`
+
+```sql
+DROP TABLE IF EXISTS "sessions";
+```
+
+Run migration up
+
+```sh
+make migrateup
+```
+
+`db/query/session.sql`
+
+```sql
+-- name: CreateSession :one
+INSERT INTO sessions (
+  id,
+  username,
+  refresh_token,
+  user_token,
+  client_ip,
+  is_blocked,
+  expires_at
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7
+) RETURNING *;
+
+-- name: GetSession :one
+SELECT * FROM sessions
+WHERE id = $1 LIMIT 1;
+```
+
+Run sqlc to generate codes for queries
+
+```sh
+make sqlc
+```
+
+Run mock to regenerate mock store
+
+```sh
+make mock
+```
+
+Run unit tests
+
+```sh
+make test
+```
+
+</details>
 
 </details>
 
