@@ -1839,3 +1839,54 @@ make test
 </details>
 
 </details>
+
+## Postman Tests
+
+<details>
+<summary>View contents</summary>
+
+Login endpoint: `POST /users/login`
+Body:
+
+```json
+{
+  "username": "foyez",
+  "password": "testpass"
+}
+```
+
+Response:
+
+```json
+{
+  "access_token": "v2.local.nBMJul9vDH3bs9yrxyi54E",
+  "user": {
+    "username": "foyez",
+    "full_name": "Foyez Ahmed",
+    "email": "foyez@email.com",
+    "password_changed_at": "0001-01-01T00:00:00Z",
+    "created_at": "2023-10-08T10:49:24.939704Z"
+  }
+}
+```
+
+Navigate to Tests
+
+```js
+pm.test("Status code is 200", function () {
+  pm.response.to.have.status(200);
+});
+
+var jsonData = JSON.parse(responseBody);
+pm.collectionVariables.set("access_token", jsonData.access_token);
+```
+
+After call the login api: Test results
+
+```txt
+PASS Status code is 200
+```
+
+Now we can use `access_token` collection variable to other apis of this collection, e.g. `{{access_token}}`
+
+</details>
