@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"errors"
 	"net/http"
 	"time"
@@ -11,7 +10,7 @@ import (
 	"github.com/foyez/simplebank/util"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type createUserRequest struct {
@@ -60,12 +59,9 @@ func (server *Server) createUser(ctx *gin.Context) {
 	}
 	user, err := server.store.CreateUser(ctx, arg)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			switch pqErr.Code.Name() {
-			case "unique_violation":
-				ctx.JSON(http.StatusForbidden, errorResponse(err))
-				return
-			}
+		if db.ErrCode(err) == db.UniqueViolation {
+			ctx.JSON(http.StatusConflict, errorResponse(err))
+			return
 		}
 
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -100,7 +96,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 
 	user, err := server.store.GetUser(ctx, req.Username)
 	if err != nil {
-		if err == db.ErrRecordNotFound {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -193,14 +189,14 @@ func (server *Server) updateUser(ctx *gin.Context) {
 	}
 
 	if req.FullName != nil {
-		arg.FullName = sql.NullString{
+		arg.FullName = pgtype.Text{
 			String: *req.FullName,
 			Valid:  req.FullName != nil,
 		}
 	}
 
 	if req.Email != nil {
-		arg.Email = sql.NullString{
+		arg.Email = pgtype.Text{
 			String: *req.Email,
 			Valid:  req.Email != nil,
 		}
@@ -213,11 +209,11 @@ func (server *Server) updateUser(ctx *gin.Context) {
 			return
 		}
 
-		arg.HashedPassword = sql.NullString{
+		arg.HashedPassword = pgtype.Text{
 			String: hashedPassword,
 			Valid:  true,
 		}
-		arg.PasswordChangedAt = sql.NullTime{
+		arg.PasswordChangedAt = pgtype.Timestamptz{
 			Time:  time.Now(),
 			Valid: true,
 		}
@@ -225,7 +221,7 @@ func (server *Server) updateUser(ctx *gin.Context) {
 
 	user, err := server.store.UpdateUser(ctx, arg)
 	if err != nil {
-		if err == db.ErrRecordNotFound {
+		if errors.Is(err, db.ErrRecordNotFound) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
