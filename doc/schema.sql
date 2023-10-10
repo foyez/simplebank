@@ -1,9 +1,10 @@
 -- SQL dump generated using DBML (dbml-lang.org)
 -- Database: PostgreSQL
--- Generated at: 2023-06-17T04:19:27.462Z
+-- Generated at: 2023-10-10T17:59:48.163Z
 
 CREATE TABLE "users" (
   "username" varchar PRIMARY KEY,
+  "role" varchar NOT NULL DEFAULT 'depositor',
   "hashed_password" varchar NOT NULL,
   "full_name" varchar NOT NULL,
   "email" varchar UNIQUE NOT NULL,
@@ -45,6 +46,8 @@ CREATE INDEX ON "transfers" ("from_account_id");
 CREATE INDEX ON "transfers" ("to_account_id");
 
 CREATE INDEX ON "transfers" ("from_account_id", "to_account_id");
+
+COMMENT ON TABLE "users" IS 'table "users" contains user information';
 
 COMMENT ON TABLE "accounts" IS 'table "accounts" contains account information';
 

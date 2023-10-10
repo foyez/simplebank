@@ -340,7 +340,7 @@ func TestUpdateUserAPI(t *testing.T) {
 				"email":     &newEmail,
 			},
 			setupAuth: func(request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, user.Role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				arg := db.UpdateUserParams{
@@ -392,7 +392,7 @@ func TestUpdateUserAPI(t *testing.T) {
 				"email":     &newEmail,
 			},
 			setupAuth: func(request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, user.Role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -412,7 +412,7 @@ func TestUpdateUserAPI(t *testing.T) {
 				"email":     &invalidEmail,
 			},
 			setupAuth: func(request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, user.Role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -431,7 +431,7 @@ func TestUpdateUserAPI(t *testing.T) {
 				"email":     &newEmail,
 			},
 			setupAuth: func(request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, -time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.Username, user.Role, -time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -450,7 +450,7 @@ func TestUpdateUserAPI(t *testing.T) {
 				"email":     &newEmail,
 			},
 			setupAuth: func(request *http.Request, tokenMaker token.Maker) {
-				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "unauthorized-user", time.Minute)
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, "unauthorized-user", user.Role, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -499,6 +499,7 @@ func randomUser(t *testing.T) (user db.User, password string) {
 
 	user = db.User{
 		Username:       util.RandomOwner(),
+		Role:           util.DepositorRole,
 		HashedPassword: hashedPassword,
 		FullName:       util.RandomOwner(),
 		Email:          util.RandomEmail(),
