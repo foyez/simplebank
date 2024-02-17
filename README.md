@@ -1,4 +1,4 @@
-# Backend Master
+# Simple Bank
 
 ## Project Name: Simple Bank
 
